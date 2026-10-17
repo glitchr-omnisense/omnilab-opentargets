@@ -1,6 +1,6 @@
 # omnilab/opentargets
 
-The Open Targets Platform for [glitchr/omnilab](https://github.com/glitchr-studio/omnilab), through
+The Open Targets Platform for [omniscient/omnilab](https://github.com/glitchr-studio/omnilab), through
 its GraphQL API: a target by its Ensembl gene (`ENSG00000244734`, HBB) with its symbol, name,
 biotype, function, location and class, its UniProt and HGNC ids, its best associated diseases with
 their scores, its drugs and clinical candidates, its InterPro domains and Reactome pathways; a
