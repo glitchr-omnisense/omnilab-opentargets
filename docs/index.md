@@ -1,5 +1,11 @@
 # omnilab/opentargets
 
+The Open Targets Platform's GraphQL API (`https://api.platform.opentargets.org/api/v4/graphql`) for
+[omnisense/omnilab](https://github.com/glitchr-omnisense/omnilab): targets (Ensembl genes), diseases
+(EFO, Mondo, HPO, Orphanet) and drugs (ChEMBL), with their associations and scores, drugs and
+clinical candidates, domains, pathways, mechanisms and indications as related things, as entities;
+a search; outside the contract, the associations paged. No key.
+
 ## Installation
 
 ```sh
@@ -14,6 +20,48 @@ $ot = (new OpenTargetsSourceFactory($httpClient))->create([
     'associations' => 10,              // optional: associations and drugs an entity holds as properties
 ]);
 ```
+
+## Credentials
+
+None: the Open Targets Platform's GraphQL API takes no key and no account.
+
+## Options
+
+The factory's options, with the defaults it applies (`OpenTargetsSourceFactory`):
+
+| Option | Type | Default | Required | Effect |
+|---|---|---|---|---|
+| `associations` | `int` | `10` | no | how many associations (and drugs) an entity holds as properties, the best first; their counts are kept whatever it is |
+| `mailto` | `?string` | null | no | a contact address, sent in the User-Agent |
+| `user_agent` | `?string` | null | no | the whole User-Agent, in place of the one made from `mailto` |
+| `throttle` | `float` | `0` | no | seconds left between two calls: Open Targets publishes no rate |
+| `base_uri` | `string` | `https://api.platform.opentargets.org/api/v4/` | no | the API the source calls |
+
+## Capabilities
+
+`capabilities()` answers `entity`, `search`, `cross_references`; an operation it does not answer throws `NotSupportedException` before any call.
+
+| Capability | Supported | |
+|---|---|---|
+| `entity` | yes | a target (an Ensembl gene), a disease or phenotype (Mondo, EFO, HPO, Orphanet), a drug (ChEMBL); one GraphQL call; another base refused before any call |
+| `search` | yes | Open Targets' search over targets, diseases and drugs, 100 a page at most, with a `total` |
+| `series` | no |  |
+| `products` | no |  |
+| `occurrences` | no |  |
+| `datasets` | no |  |
+| `jobs` | no |  |
+| `open` | no |  |
+| `structure` | no |  |
+| `cross_references` | yes | a target's Swiss-Prot accession and HGNC id; a disease's former ids and its OMIM, Orphanet, EFO, Mondo or HPO cross-references |
+| `forecast` | no |  |
+| `historical` | no |  |
+| `area` | no |  |
+| `station` | no |  |
+| `cloud_cover` | no |  |
+
+Outside the contract, on `Omnilab\OpenTargets\OpenTargetsSource`: `associations(Identifier|string
+$id, int $limit = 25, ?string $cursor = null): Page` - a target's or a disease's associations, the
+best scored first, as `Association` objects ([below](#outside-the-contract-associations)).
 
 ## The schemes
 
@@ -110,6 +158,65 @@ Open Targets' genetics, `variant`, `study`), expression, safety liabilities, tra
 probes, mouse phenotypes, pharmacogenomics, adverse events, the literature (`literatureOcurrences`),
 the clinical reports behind a drug's stage, and indirect associations (through descendants).
 
+## Example
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Omnilab\OpenTargets\OpenTargetsSourceFactory;
+use Omnilab\Source\Query;
+use Symfony\Component\HttpClient\HttpClient;
+
+$ot = (new OpenTargetsSourceFactory(HttpClient::create()))->create(['mailto' => 'you@example.org', 'associations' => 3]);
+
+$scd = $ot->entity('MONDO_0011382');
+echo $scd->label, ' (', $scd->id->display(), '): ', $scd->value('associated_targets'), ' targets, ', $scd->value('drugs'), " drugs; the strongest associations:\n";
+foreach ($scd->properties('association') as $association) {
+    echo '  ', $association->label, ' ', $association, "\n";
+}
+
+foreach ($ot->associations('MONDO_0011382', 2) as $a) {
+    printf("  %s %.3f %s\n", $a->targetName, $a->score, implode(', ', array_slice(array_keys($a->datatypes), 0, 3)));
+}
+
+$page = $ot->search(new Query('sickle cell', limit: 3));
+printf("%d hits for \"sickle cell\"; the first: %s %s (%s)\n", $page->total, $page->first()->id->display(), $page->first()->label, $page->first()->kind);
+```
+
+```
+sickle cell disease (MONDO:0011382): 1643 targets, 163 drugs; the strongest associations:
+  Association with HBB 0.8286564502
+  Association with BCL11A 0.6414482538
+  Association with RRM2B 0.5946157766
+  HBB 0.829 clinical, genetic_literature, genetic_association
+  BCL11A 0.641 clinical, genetic_association, literature
+264 hits for "sickle cell"; the first: MONDO:0011382 sickle cell disease (disease)
+```
+
+(as answered on 2026-10-27: three GraphQL calls)
+
+```yaml
+# config/packages/omnilab.yaml
+omnilab:
+    sources:
+        opentargets: { factory: opentargets, options: { mailto: '%env(OMNILAB_MAILTO)%', associations: 10 } }
+```
+
+`associations()` is a method of `OpenTargetsSource`, not of the interface the bundle injects:
+check the instance before calling it.
+
+## Errors
+
+Every call goes through `HttpSource`: a 404 or a 410 (and a 204) is null - an empty page for a list -; a 429 is a `RateLimitedException` (`retryAfter` from `Retry-After`); a 5xx, a time-out or a host that does not answer an `UnavailableException`; any other 4xx a `ProviderException` with its `status` and what the service said; an answer that is not JSON a `ProviderException`, a web page answered for JSON an `UnavailableException`.
+
+Open Targets' own: a malformed query is its 400, a `ProviderException` with its messages; errors
+in a 200 without data a `ProviderException` too ("the query failed: ..."); errors beside data are
+not read (the data answer). An unknown id is
+`"target": null`, null. Before any call: an Ensembl transcript or protein, an `OTAR_` therapeutic
+area, any other base's identifier (`NotSupportedException`).
+
 ## Verified, and not
 
 Against the real service on 2026-10-15 (API 26.9.0, data 26.09): HBB as a target (552 associated
@@ -120,5 +227,18 @@ hits, two pages), the associations paged both ways, a malformed query (400 and i
 Collector's walk above. The fixtures in `Tests/Fixtures/` are its answers. Each call took 0.3 to
 0.4 s.
 
+Again on 2026-10-27: sickle cell disease (1,643 targets, 163 drugs, HBB first), its associations
+paged, the search for "sickle cell" (264 hits; the example above).
+
 Not verified: a GraphQL error answered 200 (the code reads one; none was met); a rate limit (none
 published, none met).
+
+## Responsibility
+
+This package is an independent, unofficial client: it is not affiliated with, endorsed by or
+sponsored by Open Targets. The platform's data are marked [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+and the platform asks to be cited (Buniello A. et al., Nucleic Acids Res. 2025,
+10.1093/nar/gkae1128), as the README's
+[Terms of use](https://github.com/glitchr-omnisense/omnilab-opentargets#terms-of-use) says. Whoever
+runs the package is responsible for any use made of what it returns: see the README's
+[Responsibility](https://github.com/glitchr-omnisense/omnilab-opentargets#responsibility) section.
