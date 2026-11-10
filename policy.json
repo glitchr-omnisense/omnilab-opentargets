@@ -1,0 +1,40 @@
+{
+    "$schema": "https://github.com/glitchr-omnisense/contracts/blob/1.x/resources/usage-policy.schema.json",
+    "provider": "opentargets",
+    "rateLimits": null,
+    "concurrency": null,
+    "rights": {
+        "commercial": "allowed",
+        "openSourceRequired": null,
+        "caching": {
+            "permission": "allowed",
+            "maxTtl": null
+        },
+        "storage": "allowed",
+        "redistribution": "allowed",
+        "attribution": {
+            "required": false,
+            "text": "Buniello, A. et al. (2025). Open Targets Platform: facilitating therapeutic hypotheses building in drug discovery. Nucleic Acids Research.",
+            "url": "https://platform-docs.opentargets.org/citation",
+            "where": [
+                "source"
+            ]
+        },
+        "licence": "CC0-1.0"
+    },
+    "requirements": {
+        "key": false,
+        "userAgent": {
+            "required": false,
+            "pattern": null
+        }
+    },
+    "provenance": {
+        "terms": "https://platform-docs.opentargets.org/licence",
+        "policy": "https://platform-docs.opentargets.org/data-access/graphql-api",
+        "verifiedAt": "2026-11-10",
+        "declaredBy": "maintainer",
+        "contact": "https://community.opentargets.org",
+        "notes": "Licence page read 2026-11-10: Platform data marked CC0 1.0 (code Apache 2.0); some upstream sources carry their own licences (e.g. ChEMBL CC BY-SA 3.0), listed on the same page. Citation of the latest publication is requested (\"please cite\"), not required. The GraphQL API page publishes no rate limit; it discourages repeated one-entity-at-a-time querying and points to the dataset downloads for bulk use. No rate-limit headers seen on a test call. Licence and usage questions go to the Open Targets Community."
+    }
+}
