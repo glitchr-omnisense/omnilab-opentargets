@@ -37,6 +37,34 @@ Diseases are named in the core's `efo`, `mondo`, `hp` and `orphanet` schemes, ta
 `ensembl`, drugs in `chembl`. The `Collector` reaches Open Targets from any source that gives an
 Ensembl gene (`$collector->collect('hgnc', 'HBB')`) or a ChEMBL id.
 
+## Install and a first call
+
+```sh
+composer require omnilab/opentargets
+```
+
+A real call, with no account and no key: sickle cell disease in the Open Targets Platform. `mailto`
+is your address, sent in the User-Agent so that the service can reach you before it blocks a caller;
+the source keeps to the limits its [`policy.json`](policy.json) declares.
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Omnilab\OpenTargets\OpenTargetsSourceFactory;
+
+$targets = (new OpenTargetsSourceFactory())->create(['mailto' => 'you@example.org']);   // your address, in the User-Agent
+$disease = $targets->entity('MONDO_0011382');
+echo $disease->label, ': ', implode(', ', $disease->identifiers()->keys()), "\n";
+```
+
+Its output on 2026-11-13:
+
+```
+sickle cell disease: mondo:0011382, efo:0000697, orphanet:232, omim:603903
+```
+
 ## Terms of use
 
 Open Targets Platform data are marked [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
